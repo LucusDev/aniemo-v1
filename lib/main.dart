@@ -22,6 +22,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:animely/core/models/anime.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> init() async {
   await Hive.initFlutter();
@@ -57,6 +58,9 @@ void main() async {
   }
   final settingsController = SettingsController(SettingsService());
   await settingsController.loadSettings();
+  final value = await SharedPreferences.getInstance();
+  Constant.resolution =
+      value.getString("reso") == null ? "480" : value.getString("reso")!;
   runApp(
     ProviderScope(
       child: Consumer(builder: (context, w, _) {

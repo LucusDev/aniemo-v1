@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:animely/core/constants/constants.dart';
 import 'package:animely/core/models/anime.dart';
 import 'package:animely/core/utils/show_snackbar.dart';
 import 'package:animely/library/presentation/library_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'settings_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,7 +51,6 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: AppBar(
         title: const Text('Settings'),
       ),
@@ -83,6 +84,41 @@ class _SettingsViewState extends State<SettingsView> {
                         value: ThemeMode.dark,
                         child: Text('Dark Theme'),
                       )
+                    ],
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Prefered Resolution for watching anime'),
+                  DropdownButton<String>(
+                    hint: const Text("Resolution"),
+                    value: Constant.resolution,
+                    onChanged: (value) {
+                      SharedPreferences.getInstance().then((s) {
+                        s.setString("reso", value as String);
+                        Constant.resolution = value;
+                      });
+                      setState(() {});
+                    },
+                    items: const [
+                      DropdownMenuItem(
+                        value: "360",
+                        child: Text("360"),
+                      ),
+                      DropdownMenuItem(
+                        value: "480",
+                        child: Text("480"),
+                      ),
+                      DropdownMenuItem(
+                        value: "720",
+                        child: Text("720"),
+                      ),
+                      DropdownMenuItem(
+                        value: "1080",
+                        child: Text("1080"),
+                      ),
                     ],
                   ),
                 ],

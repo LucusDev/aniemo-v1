@@ -100,7 +100,10 @@ class _VideoPlayerState extends State<VideoPlayer> {
               {
                 "name": widget.anime.title,
                 "list": [
-                  {"url": link, "name": "auto"},
+                  {
+                    "url": gg[Constant.resolution] ?? link,
+                    "name": Constant.resolution
+                  },
                   ...reso.keys.map((e) {
                     return {"url": reso[e], "name": e};
                   }),
