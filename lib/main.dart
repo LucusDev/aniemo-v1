@@ -59,8 +59,7 @@ void main() async {
   final settingsController = SettingsController(SettingsService());
   await settingsController.loadSettings();
   final value = await SharedPreferences.getInstance();
-  Constant.resolution =
-      value.getString("reso") == null ? "480" : value.getString("reso")!;
+  Constant.resolution = value.getString("reso") ?? "480";
   runApp(
     ProviderScope(
       child: Consumer(builder: (context, w, _) {
