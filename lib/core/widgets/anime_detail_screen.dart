@@ -223,6 +223,7 @@ class _ShowAnimeDetailState extends State<ShowAnimeDetail> {
                   Flexible(
                       flex: o == Orientation.landscape ? 2 : 1,
                       child: EpisodeList(
+                        acceptClickCurrent: true,
                         anime: widget.anime,
                         currentEpisodeId: widget.currentEp,
                         navType: NavType.push,

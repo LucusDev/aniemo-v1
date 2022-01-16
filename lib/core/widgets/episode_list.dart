@@ -20,11 +20,13 @@ class EpisodeList extends StatefulWidget {
   final Anime anime;
   final int currentEpisodeId;
   final NavType navType;
+  final bool acceptClickCurrent;
   const EpisodeList({
     Key? key,
     required this.anime,
     required this.currentEpisodeId,
     required this.navType,
+    this.acceptClickCurrent = false,
   }) : super(key: key);
 
   @override
@@ -92,6 +94,7 @@ class _EpisodeListState extends State<EpisodeList> {
               currentIndex: index,
               anime: widget.anime,
               episode: downloadedEpisode,
+              acceptClickCurrent: widget.acceptClickCurrent,
               percentage: currentlyDownloading
                   ? w(downloadQuesProvider).currentQue!.progress
                   : 0,
@@ -112,6 +115,7 @@ class EpisodeListTile extends StatelessWidget {
   final Anime anime;
   final Episode? episode;
   final NavType navType;
+  final bool acceptClickCurrent;
   const EpisodeListTile({
     Key? key,
     required this.currentlySelected,
@@ -122,6 +126,7 @@ class EpisodeListTile extends StatelessWidget {
     required this.anime,
     required this.episode,
     required this.percentage,
+    this.acceptClickCurrent = false,
   }) : super(key: key);
 
   @override
@@ -243,7 +248,7 @@ class EpisodeListTile extends StatelessWidget {
       title: Text('Ep${currentIndex + 1}'),
       onTap: () async {
         if (!kIsWeb) {
-          if (currentlySelected) return;
+          if (currentlySelected && !acceptClickCurrent) return;
           if (downloaded) {
             switch (navType) {
               case NavType.push:
