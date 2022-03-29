@@ -6,6 +6,7 @@ import 'package:faker/faker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as parser;
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'package:animely/core/models/anime.dart';
 import 'package:animely/core/models/episode.dart';
@@ -51,8 +52,9 @@ Future<NetworkResult> getDownloadLinks(String epLink) async {
     if (!_url.startsWith("https://")) {
       _url = "https://" + _url;
     }
+    print(_url);
     String realURL =
-        'https://gogoplay.io/download?id=${Uri.parse(_url).queryParameters['id']}';
+        'https://gogoplay5.com/download?id=${Uri.parse(_url).queryParameters['id']}';
     // final res = await http.get(Uri.parse(realURL));
 
     // final $ = parser.parse(res.body);
@@ -75,14 +77,15 @@ Future<NetworkResult> getDownloadLinks(String epLink) async {
     // });
     // final Map<String, String> returnValue =
     await Future.delayed(Duration.zero);
-    final Map<String, String> returnValue =
-        await Constant.key.currentState!.push(PageRouteBuilder(
-      opaque: true,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return LoadingWeb(url: realURL);
-      },
-    ));
-    await Future.delayed(Duration.zero);
+    final Map<String, String> returnValue = await _getDownloadLinks(realURL);
+
+    // await Constant.key.currentState!.push(PageRouteBuilder(
+    //   opaque: true,
+    //   pageBuilder: (context, animation, secondaryAnimation) {
+    //     return LoadingWeb(url: realURL);
+    //   },
+    // ));
+    // await Future.delayed(Duration.zero);
     print(returnValue);
     return NetworkResult<Map<String, String>>(
         state: NetworkState.success, data: returnValue);
@@ -105,61 +108,101 @@ String fakeUserAgent() {
   }
 }
 
-class LoadingWeb extends StatelessWidget {
-  late WebViewController _controller;
-  String url;
-  LoadingWeb({Key? key, required this.url}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0),
-      body: Column(
-        children: [
-          SizedBox(
-            width: 1,
-            height: 1,
-            child: WebView(
-              userAgent: fakeUserAgent()
-              // "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
-              ,
-              initialUrl: url,
-              javascriptMode: JavascriptMode.unrestricted,
-              onWebViewCreated: (WebViewController webViewController) {
-                _controller = webViewController;
-              },
-              onPageFinished: (String url) async {
-                final str = await _controller.runJavascriptReturningResult(
-                    "window.document.body.innerHTML");
-                final $ = parser.parse(json.decode(str));
-                final Map<String, String> returnValue = {};
-                $
-                    .querySelectorAll(
-                        "#main .content .content_c .content_c_bg .mirror_link .dowload a")
-                    .forEach((element) {
-                  // print(element);
-                  if (element.text.contains("360")) {
-                    returnValue['360'] = element.attributes['href']!;
-                  } else if (element.text.contains("480")) {
-                    returnValue['480'] = element.attributes['href']!;
-                  } else if (element.text.contains("720")) {
-                    returnValue['720'] = element.attributes['href']!;
-                  } else if (element.text.contains("1080")) {
-                    returnValue['1080'] = element.attributes['href']!;
-                  }
-                });
-                print(returnValue);
-                await Future.delayed(Duration.zero);
-                Navigator.of(context).pop(returnValue);
-              },
-            ),
-          ),
-          const Expanded(
-            child: Center(
-              child: CircularProgressIndicator(),
-            ),
-          )
-        ],
-      ),
-    );
+// class LoadingWeb extends StatelessWidget {
+//   late WebViewController _controller;
+//   String url;
+//   LoadingWeb({Key? key, required this.url}) : super(key: key);
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: Colors.black.withOpacity(0),
+//       body: Column(
+//         children: [
+//           SizedBox(
+//             width: 1,
+//             height: 1,
+//             child: WebView(
+//               userAgent: fakeUserAgent()
+//               // "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"
+//               ,
+//               initialUrl: url,
+//               javascriptMode: JavascriptMode.unrestricted,
+//               onWebViewCreated: (WebViewController webViewController) {
+//                 _controller = webViewController;
+//               },
+//               onPageFinished: (String url) async {
+//                 final str = await _controller.runJavascriptReturningResult(
+//                     "window.document.body.innerHTML");
+//                 final $ = parser.parse(json.decode(str));
+//                 final Map<String, String> returnValue = {};
+//                 $
+//                     .querySelectorAll(
+//                         "#main .content .content_c .content_c_bg .mirror_link .dowload a")
+//                     .forEach((element) {
+//                   // print(element);
+//                   if (element.text.contains("360")) {
+//                     returnValue['360'] = element.attributes['href']!;
+//                   } else if (element.text.contains("480")) {
+//                     returnValue['480'] = element.attributes['href']!;
+//                   } else if (element.text.contains("720")) {
+//                     returnValue['720'] = element.attributes['href']!;
+//                   } else if (element.text.contains("1080")) {
+//                     returnValue['1080'] = element.attributes['href']!;
+//                   }
+//                 });
+//                 print(returnValue);
+//                 await Future.delayed(Duration.zero);
+//                 Navigator.of(context).pop(returnValue);
+//               },
+//             ),
+//           ),
+//           const Expanded(
+//             child: Center(
+//               child: CircularProgressIndicator(),
+//             ),
+//           )
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+Future<Map<String, String>> _getDownloadLinks(String link) async {
+  Map<String, String> rV1 = {};
+  late HeadlessInAppWebView _w;
+  _w = HeadlessInAppWebView(
+    initialUrlRequest: URLRequest(url: Uri.parse(link)),
+    onLoadStop: (controller, url) async {
+      print(link);
+      String rV = await controller.evaluateJavascript(
+          source: "window.document.body.innerHTML");
+      final $ = parser.parse(rV);
+      final Map<String, String> returnValue = {};
+      $
+          .querySelectorAll(
+              "#main .content .content_c .content_c_bg .mirror_link .dowload a")
+          .forEach((element) {
+        // print(element);
+        if (element.text.contains("360")) {
+          returnValue['360'] = element.attributes['href']!;
+        } else if (element.text.contains("480")) {
+          returnValue['480'] = element.attributes['href']!;
+        } else if (element.text.contains("720")) {
+          returnValue['720'] = element.attributes['href']!;
+        } else if (element.text.contains("1080")) {
+          returnValue['1080'] = element.attributes['href']!;
+        }
+      });
+      rV1 = returnValue;
+      controller.stopLoading();
+      await _w.dispose();
+    },
+  );
+  await _w.run();
+  while (_w.isRunning()) {
+    await Future.delayed(const Duration(milliseconds: 300));
   }
+  _w.dispose();
+
+  return rV1;
 }

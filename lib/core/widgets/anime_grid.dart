@@ -119,6 +119,20 @@ class AnimeGridState extends State<AnimeGrid> {
                 controller: _scrollController,
                 shrinkWrap: hasPage,
                 gridDelegate:
+                    // SliverStaggeredGridDelegateWithMaxCrossAxisExtent(
+                    //   staggeredTileCount: hasPage ? data.length + 1 : data.length,
+                    //   maxCrossAxisExtent: 200,
+                    //   staggeredTileBuilder: (index) {
+                    //     if (index == data.length) {
+                    //       return StaggeredTile.count(
+                    //           MediaQuery.of(context).size.width > 600 ? 4 : 2, 0.3);
+                    //     }
+
+                    //     return const StaggeredTile.count(1, 1.75);
+                    //   },
+                    //   crossAxisSpacing: 8,
+                    //   mainAxisSpacing: 8,
+                    // ),
                     SliverStaggeredGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount:
                       MediaQuery.of(context).size.width > 600 ? 4 : 2,
@@ -145,7 +159,7 @@ class AnimeGridState extends State<AnimeGrid> {
                       ),
                     );
                   }
-                  
+
                   return AnimeGridItem(
                     screenType: widget.screenType,
                     showLibraryStatus: !widget.isOffline,

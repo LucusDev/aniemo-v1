@@ -8,7 +8,6 @@ import 'package:animely/core/widgets/video_player_pannel.dart';
 import 'package:animely/navigation/test_screen.dart';
 import 'package:fijkplayer/fijkplayer.dart';
 import 'package:fijkplayer_skin/schema.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -58,7 +57,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
   VideoPlayerController? _videoPlayerController;
   FijkPlayer? player;
   ShowConfigAbs? vCfg;
-
+  bool mode1 = false;
   int _curTabIdx = 0;
   int cur = 0;
   int _curActiveIdx = 0;
@@ -87,6 +86,13 @@ class _VideoPlayerState extends State<VideoPlayer> {
           final link = getLink("stream_link");
           final reso = getResolutions(link);
           final Map<String, String> gg = {};
+          if (mode1) {
+            _videoPlayerController = VideoPlayerController.network(link);
+            _flickManager = FlickManager(
+              videoPlayerController: _videoPlayerController!,
+            );
+          }
+
           widget.currentEpisode.servers.forEach((element) {
             if (element.name == "360" ||
                 element.name == "480" ||
@@ -105,15 +111,34 @@ class _VideoPlayerState extends State<VideoPlayer> {
                     "name": Constant.resolution
                   },
                   ...reso.keys.map((e) {
+                    // return VideoSourceFormatVideoList(url: reso[e], name: e);
                     return {"url": reso[e], "name": e};
                   }),
                   ...gg.keys.map((e) {
+                    // return VideoSourceFormatVideoList(url: reso[e], name: e);
+
                     return {"url": reso[e], "name": e};
                   }),
                 ]
               },
             ]
           };
+          // _videoSourceTabs = VideoSourceFormat(video: [
+          //   VideoSourceFormatVideo(
+          //     name: widget.anime.title,
+          //     list: [
+          //       ...reso.keys.map((e) {
+          //         return VideoSourceFormatVideoList(url: reso[e], name: e);
+          //         // return {"url": reso[e], "name": e};
+          //       }),
+          //       ...gg.keys.map((e) {
+          //         return VideoSourceFormatVideoList(url: reso[e], name: e);
+
+          //         // return {"url": reso[e], "name": e};
+          //       }),
+          //     ],
+          //   ),
+          // ]);
           _videoSourceTabs = VideoSourceFormat.fromJson(videoList);
           speed = 1.0;
           break;
@@ -126,7 +151,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
         }
     }
   }
-
+  
   void onChangeVideo(int curTabIdx, int curActiveIdx) {
     setState(() {
       cur = player!.currentPos.inMilliseconds;
@@ -185,31 +210,33 @@ class _VideoPlayerState extends State<VideoPlayer> {
                       flex: o == Orientation.portrait ? 0 : 2,
                       child: AspectRatio(
                         aspectRatio: 16 / 9,
-                        child: widget.currentEpisode.type != EpisodeType.file
-                            ? FijkView(
-                                color: Colors.black,
-                                fit: FijkFit.cover,
-                                player: player!,
-                                panelBuilder: _pannelBuilder,
-                              )
-                            : FlickVideoPlayer(
-                                preferredDeviceOrientation: const [
-                                  DeviceOrientation.portraitUp,
-                                  DeviceOrientation.landscapeLeft,
-                                  DeviceOrientation.landscapeRight,
-                                ],
-                                preferredDeviceOrientationFullscreen: const [
-                                  // DeviceOrientation.portraitUp,
-                                  DeviceOrientation.landscapeLeft,
-                                  DeviceOrientation.landscapeRight,
-                                ],
-                                flickManager: _flickManager!,
-                                flickVideoWithControls:
-                                    const CustomVideoWithControls(
-                                  videoFit: BoxFit.contain,
-                                  controls: FlickPortraitControls(),
-                                ),
-                              ),
+                        child:
+                            ((widget.currentEpisode.type != EpisodeType.file) &&
+                                    !mode1)
+                                ? FijkView(
+                                    color: Colors.black,
+                                    fit: FijkFit.cover,
+                                    player: player!,
+                                    panelBuilder: _pannelBuilder,
+                                  )
+                                : FlickVideoPlayer(
+                                    preferredDeviceOrientation: const [
+                                      DeviceOrientation.portraitUp,
+                                      DeviceOrientation.landscapeLeft,
+                                      DeviceOrientation.landscapeRight,
+                                    ],
+                                    preferredDeviceOrientationFullscreen: const [
+                                      // DeviceOrientation.portraitUp,
+                                      DeviceOrientation.landscapeLeft,
+                                      DeviceOrientation.landscapeRight,
+                                    ],
+                                    flickManager: _flickManager!,
+                                    flickVideoWithControls:
+                                        const CustomVideoWithControls(
+                                      videoFit: BoxFit.contain,
+                                      controls: FlickPortraitControls(),
+                                    ),
+                                  ),
                       ),
                     ),
                   // const SizedBox(
@@ -273,6 +300,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
         reso['1080p'] = link.replaceFirst("$t.m3u8", "1080.m3u8");
       }
     }
+    print("resolution list" + reso.toString());
     return reso;
   }
 

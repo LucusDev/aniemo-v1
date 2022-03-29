@@ -192,6 +192,7 @@ class _CustomFijkPanelState extends State<CustomFijkPanel>
 
   // 切换播放源
   Future<void> changeCurPlayVideo(int tabIdx, int activeIdx) async {
+    print("coe on man!!!!!!!!!!!!");
     // await player.stop();
     await player.reset().then((_) {
       String curTabActiveUrl =
@@ -997,6 +998,8 @@ class _buildGestureDetectorState extends State<_buildGestureDetector> {
 
   // 切换播放源
   Future<void> changeCurPlayVideo(int tabIdx, int activeIdx) async {
+    print(
+        "this is the method!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     // await player.seekTo(0);
     await player.stop();
     setState(() {

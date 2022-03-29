@@ -2,9 +2,25 @@ import 'package:animely/core/constants/constants.dart';
 import 'package:animely/core/models/anime.dart';
 import 'package:animely/core/models/episode.dart';
 import 'package:animely/core/models/network_return_result.dart';
-import 'package:animely/download/data/data_source/network/network.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:helper/helper.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as parser;
+
+extension StringExtension on String {
+  String capitalize() {
+    return '${this[0].toUpperCase()}${substring(1).toLowerCase()}';
+  }
+
+  String addPrefixToUrl() {
+    if (startsWith('http')) {
+      return this;
+    }
+    return 'https://$this';
+  }
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //Stream Links
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -36,25 +52,24 @@ Future<NetworkResult> getStreamLink(Episode ep) async {
           l = i.iframe;
         }
       }
-
-      Map<String, String> links = {};
-
-      final link = await getDownloadLinks(l);
-      if (link.state == NetworkState.error) throw Exception();
-      List<Servers> servers = ep.servers;
-      servers.add(Servers(
-          name: "stream_link",
-          iframe: (link.data as Map<String, String>)['480'] ??
-              (link.data as Map<String, String>).values.first));
-      (link.data as Map<String, String>).forEach((key, val) {
-        servers.add(Servers(
-          name: key,
-          iframe: val,
-        ));
+      final link = await _getStreamingLink2(l);
+      late NetworkResult<Episode> r;
+      link.when(success: (value) {
+        List<Servers> servers = ep.servers;
+        value.forEach((key, value) {
+          if (key == Constant.resolution) {
+            servers.add(Servers(name: "stream_link", iframe: value));
+          } else {
+            servers.add(Servers(name: key, iframe: value));
+          }
+        });
+        returnValue = ep.copyWith(servers: servers, type: EpisodeType.network);
+        r = NetworkResult<Episode>(
+            state: NetworkState.success, data: returnValue);
+      }, error: (String? e) {
+        throw Exception();
       });
-      returnValue = ep.copyWith(servers: servers, type: EpisodeType.network);
-      return NetworkResult<Episode>(
-          state: NetworkState.success, data: returnValue);
+      return r;
     } else {
       for (var element in rp.allMatches(res.body)) {
         List<Servers> servers = ep.servers;
@@ -70,6 +85,138 @@ Future<NetworkResult> getStreamLink(Episode ep) async {
   }
 }
 
+Future<Result<String>> _getStreamingLink(String iframeUrl) async {
+  String rV = '';
+  int count = 0;
+  late final HeadlessInAppWebView headlessWebView;
+  headlessWebView = HeadlessInAppWebView(
+    initialUrlRequest: URLRequest(
+      url: Uri.parse(
+        iframeUrl.addPrefixToUrl(),
+      ),
+    ),
+    onWebViewCreated: (controller) {},
+    onLoadStart: (controller, url) async {
+      print(url.toString());
+      if (!url.toString().contains('gogoplay')) {
+        await controller.loadUrl(
+            urlRequest: URLRequest(
+          url: Uri.parse(
+            iframeUrl.addPrefixToUrl(),
+          ),
+        ));
+        return;
+      }
+    },
+    onProgressChanged: (controller, progress) {
+      if (kDebugMode) {
+        print(progress);
+      }
+    },
+    // ignore: no_leading_underscores_for_local_identifiers
+    onLoadStop: (_c, url) async {
+      try {
+        if (!url.toString().contains('gogoplay')) return;
+        // await _c.evaluateJavascript(
+        //     source:
+        //         'document.querySelector(".jw-icon.jw-icon-inline.jw-button-color.jw-reset.jw-icon-playback").click()');
+        await _c.evaluateJavascript(
+            source: 'document.querySelector(".jw-video.jw-reset").click()');
+
+        final jstring = await _c
+            .evaluateJavascript(source: '''window.document.body.innerHTML''');
+        final doc = parser.parse(jstring);
+        final videoTag = doc.getElementsByTagName('video');
+        if (videoTag.isNotEmpty) {
+          if (videoTag.first.attributes['src'] != null) {
+            // if (kDebugMode) {
+            print('ans is here' + videoTag.first.attributes['src']!);
+            rV = videoTag.first.attributes['src']!;
+            _c.stopLoading();
+            headlessWebView.dispose();
+            // }
+          } else {
+            count++;
+            print("reloading");
+            print(count);
+            await _c.loadUrl(
+              urlRequest: URLRequest(
+                url: Uri.parse(
+                  iframeUrl.addPrefixToUrl(),
+                ),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('error $e');
+        }
+      }
+    },
+  );
+
+  await headlessWebView.run();
+  while (headlessWebView.isRunning() && count <= 10) {
+    await Future.delayed(const Duration(milliseconds: 300));
+  }
+  headlessWebView.dispose();
+  if (rV.isEmpty) return const Result.error();
+  return Result.success(rV);
+}
+
+Future<Result<Map<String, String>>> _getStreamingLink2(String iframeUrl) async {
+  String _url = iframeUrl;
+  if (!_url.startsWith("https://")) {
+    _url = "https://" + _url;
+  }
+  print(_url);
+  String realURL =
+      'https://gogoplay5.com/download?id=${Uri.parse(_url).queryParameters['id']}';
+
+  final Map<String, String> returnValue = await _getDownloadLinks(realURL);
+  return Result.success(returnValue);
+}
+
+Future<Map<String, String>> _getDownloadLinks(String link) async {
+  Map<String, String> rV1 = {};
+  late HeadlessInAppWebView _w;
+  _w = HeadlessInAppWebView(
+    initialUrlRequest: URLRequest(url: Uri.parse(link)),
+    onLoadStop: (controller, url) async {
+      print(link);
+      String rV = await controller.evaluateJavascript(
+          source: "window.document.body.innerHTML");
+      final $ = parser.parse(rV);
+      final Map<String, String> returnValue = {};
+      $
+          .querySelectorAll(
+              "#main .content .content_c .content_c_bg .mirror_link .dowload a")
+          .forEach((element) {
+        // print(element);
+        if (element.text.contains("360")) {
+          returnValue['360'] = element.attributes['href']!;
+        } else if (element.text.contains("480")) {
+          returnValue['480'] = element.attributes['href']!;
+        } else if (element.text.contains("720")) {
+          returnValue['720'] = element.attributes['href']!;
+        } else if (element.text.contains("1080")) {
+          returnValue['1080'] = element.attributes['href']!;
+        }
+      });
+      rV1 = returnValue;
+      controller.stopLoading();
+      await _w.dispose();
+    },
+  );
+  await _w.run();
+  while (_w.isRunning()) {
+    await Future.delayed(const Duration(milliseconds: 300));
+  }
+  _w.dispose();
+
+  return rV1;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //animeEpisodeHandler
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

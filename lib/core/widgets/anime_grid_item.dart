@@ -104,8 +104,9 @@ class _AnimeGridItemState extends State<AnimeGridItem> {
                   builder: (context) {
                     return ShowAnimeDetail(
                         anime: pushAnime.data as Anime,
-                        currentEp:
-                            (pushAnime.data as Anime).episodes.length - 1);
+                        currentEp: widget.anime.title.split("\n").length > 1
+                            ? (pushAnime.data as Anime).episodes.length - 1
+                            : -1);
                   },
                 ));
               }
